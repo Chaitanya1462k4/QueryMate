@@ -97,8 +97,43 @@ def get_schema(db: SQLDatabase) -> str:
     return db.get_table_info()
 
 
+def clean_sql(query: str) -> str:
+    """Clean markdown code fences, backticks, and extra keywords from LLM output."""
+    cleaned = query.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+    if cleaned.lower().startswith("sql"):
+        cleaned = cleaned[3:].strip()
+    return cleaned
+
+
 def run_query(db: SQLDatabase, query: str) -> str:
-    return db.run(query)
+    """Execute SQL query safely, splitting multi-statement queries to prevent sqlite3 ProgrammingError."""
+    cleaned = clean_sql(query)
+    # Split statements by semicolon while ignoring empty ones
+    statements = [stmt.strip() for stmt in cleaned.split(";") if stmt.strip()]
+
+    if not statements:
+        return "No valid SQL query found."
+
+    # If single statement, execute directly
+    if len(statements) == 1:
+        return db.run(statements[0])
+
+    # If multiple statements, execute each independently and combine results
+    combined_results = []
+    for i, stmt in enumerate(statements, 1):
+        try:
+            res = db.run(stmt)
+            combined_results.append(f"Result {i} ({stmt[:40]}...):\n{res}")
+        except Exception as e:
+            combined_results.append(f"Result {i} Error: {e}")
+    return "\n\n".join(combined_results)
 
 
 # ── Chain builders ──
@@ -111,8 +146,12 @@ def build_sql_chain(model, db):
 
     prompt = ChatPromptTemplate.from_messages([
         ("system",
-         "Given an input question, convert it to a SQL query. No pre-amble. "
-         "Please do not return anything else apart from the SQL query, no prefix or suffix quotes, no sql keyword, nothing please"),
+         "You are an expert SQL assistant. Given an input question and schema, write a single valid SQL query.\n"
+         "CRITICAL RULES:\n"
+         "1. Return ONLY the raw SQL query with no markdown formatting, no backticks (```), and no explanation.\n"
+         "2. Return only ONE single SQL statement. Never generate multiple queries separated by semicolons.\n"
+         "3. If querying data across tables, use JOIN or UNION operations inside a single query.\n"
+         "4. Only generate read-only SELECT queries."),
         ("human", template)
     ])
 
@@ -121,6 +160,7 @@ def build_sql_chain(model, db):
         | prompt
         | model
         | StrOutputParser()
+        | clean_sql
     )
 
 
@@ -279,10 +319,10 @@ for msg in st.session_state.messages:
 if not st.session_state.messages:
     st.markdown("#### 💡 Try asking something like:")
     examples = [
-        "How many tables are in this database?",
-        "Show me the first 5 rows of each table",
-        "What columns does each table have?",
-        "What is the total count of records per table?",
+        "List the names of all tables in this database",
+        "What are the top 5 records by highest amount or value?",
+        "Show 5 sample records from the main table",
+        "How many total records exist across the primary table?",
     ]
     cols = st.columns(2)
     for i, example in enumerate(examples):
