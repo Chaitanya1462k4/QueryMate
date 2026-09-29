@@ -1,7 +1,10 @@
 import streamlit as st
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_classic.utilities import SQLDatabase
+try:
+    from langchain_community.utilities import SQLDatabase
+except ImportError:
+    from langchain_classic.utilities import SQLDatabase
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 from langchain_core.runnables import RunnablePassthrough
 from dotenv import load_dotenv
@@ -11,6 +14,9 @@ import time
 
 # ── Load environment ──
 load_dotenv()
+# Support Streamlit Cloud Secrets
+if "HF_TOKEN" not in os.environ and hasattr(st, "secrets") and "HF_TOKEN" in st.secrets:
+    os.environ["HF_TOKEN"] = st.secrets["HF_TOKEN"]
 
 # ── Page config ──
 st.set_page_config(
