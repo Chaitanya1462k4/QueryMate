@@ -1,5 +1,7 @@
 # 🗃️ QueryMate — Natural Language to SQL Assistant
 
+🚀 **Live Demo:** [Try QUERYMATE](https://querymateio.streamlit.app/)
+
 **QueryMate** is an interactive LLM-powered assistant that lets you query relational databases using natural English language. Ask questions, view the generated SQL queries in real time, inspect the execution results, and receive friendly natural language summaries — all packaged within a clean Streamlit interface.
 
 ---
@@ -73,7 +75,7 @@ User Prompt (Natural Language)
 
 3. **Install dependencies:**
    ```bash
-   pip install streamlit langchain-core langchain-classic langchain-huggingface python-dotenv sqlalchemy
+   pip install -r requirements.txt
    ```
 
 ### 3. Configure Environment Variables

@@ -1,0 +1,12 @@
+# ── Core UI ──
+streamlit>=1.30.0
+
+# ── LangChain Ecosystem ──
+langchain-core>=0.3.0
+langchain-classic>=0.1.0
+langchain-huggingface>=0.1.0
+huggingface-hub>=0.20.0
+
+# ── Database & Environment ──
+SQLAlchemy>=2.0.0
+python-dotenv>=1.0.0
